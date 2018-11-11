@@ -1,0 +1,80 @@
+<ion-header>
+
+  <ion-navbar color="danger">
+    <ion-title>Your Feed</ion-title>
+    <ion-buttons end>
+      <button ion-button icon-only clear (click)="logout()">
+        <ion-icon name="log-out"></ion-icon>
+      </button>
+    </ion-buttons>
+  </ion-navbar>
+
+</ion-header>
+
+
+<ion-content>
+  <ion-row margin class="rowStyle">
+    <!--margin: adds margin on all sides (primarily to left and right) of input box row-->
+    <button ion-button icon-only color="danger" clear>
+      <!--clear background-->
+      <ion-icon name="images"></ion-icon>
+    </button>
+    <ion-input type="text" placeholder="Say something..." [(ngModel)]="text"></ion-input>
+
+    <button ion-button icon-only color="danger" clear (click)="post()">
+      <ion-icon name="send"></ion-icon>
+    </button>
+  </ion-row>
+
+  <ion-refresher (ionRefresh)="refresh($event)">
+    <ion-refresher-content>
+
+    </ion-refresher-content>
+  </ion-refresher>
+
+  <ion-card *ngFor="let post of posts">
+    <ion-item-divider color="danger">
+      {{post.data().owner_name}} Says
+      <!-- displays owner name -->
+    </ion-item-divider>
+
+    <ion-item text-wrap>
+      <!-- text-wrap: ensures all text displays on screen (like word-wrap) -->
+      {{post.data().text}}
+      <!--shows body text/comment from post-->
+    </ion-item>
+
+    <ion-row class="bottom-bar">
+      <ion-col>
+        <button ion-button block icon-left clear small color="danger" class="border-right">
+          <ion-icon name="thumbs-up"></ion-icon>
+          <small>12 Likes</small>
+        </button>
+      </ion-col>
+
+      <ion-col>
+        <button ion-button block icon-left clear small color="danger" class="border-right">
+          <!--block: each element is evenly spaced apart-->
+          <ion-icon name="text"></ion-icon>
+          <small>12 Comments</small>
+        </button>
+      </ion-col>
+
+      <ion-col>
+        <button ion-button block icon-left clear small color="danger">
+          <small> {{ ago(post.data().created.toDate()) }} ago </small>
+          <!-- created is a timestamp; toDate converts it into a Date. -->
+        </button>
+      </ion-col>
+    </ion-row>
+
+  </ion-card>
+
+  <ion-infinite-scroll (ionInfinite)="loadMorePosts($event)">
+    <!--ion-infinite-scroll: emits an event (ionInfinite)
+    everytime someone gets to end of page. ionInfinite binds to function loadMorePosts, which takes parameter $event.
+    The $event enables/disables infinite scroll.-->
+    <ion-infinite-scroll-content></ion-infinite-scroll-content>
+  </ion-infinite-scroll>
+
+</ion-content>
