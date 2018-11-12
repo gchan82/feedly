@@ -123,7 +123,7 @@ export class FeedPage {
       created: firebase.firestore.FieldValue.serverTimestamp(), //serverTimestamp gives us time post was created on server
       owner: firebase.auth().currentUser.uid,
       owner_name: firebase.auth().currentUser.displayName
-    }).then((async (doc) => { // promise: await image upload
+    }).then(async (doc) => { // promise: await image upload
       console.log(doc)
 
       if (this.image) { //if user uploaded image
@@ -131,7 +131,7 @@ export class FeedPage {
       }
 
       this.text = ""; //clear text input after message posted to database
-      this.image = undefined; //clear image after image posted to database
+      this.image = undefined; //clear-remove image after image posted to database
 
       let toast = this.toastCtrl.create({ //notify user that msg posted
         message: "Your post has been created successfully.",
@@ -146,7 +146,7 @@ export class FeedPage {
   }
 
   ago(time) {
-    let difference = moment(time).diff(moment()) //time difference: passes time to moment object; diff function calculates difference between time posted and current time.
+    let difference = moment(time).diff(moment()); //time difference: passes time to moment object; diff function calculates difference between time posted and current time.
     return moment.duration(difference).humanize(); // duration/humanize: convert difference to human readable form.
   }
 
@@ -193,10 +193,20 @@ export class FeedPage {
   }
   upload(name: string) { //upload image to firebase storage
     return new Promise((resolve, reject) => {
+
+      let loading = this.loadingCtrl.create({
+        content: "Uploading Image..." // will be present until promise resolves or rejects
+      })
+
+      loading.present();
+
       let ref = firebase.storage().ref("postImages/" + name); // ref: reference to path in firebase storage.
       let uploadTask = ref.putString(this.image.split(',')[1], "base64"); //1st param: base64 image data we are splitting into 2 pieces returning piece at index 1; store image data with "uploadTask", 2nd param: string base64 - must type "base64" exactly. Note: you can also pause(), resume(), and cancel() uploads with uploadTask.
-      uploadTask.on("state_changed", (taskSnapshot) => { //state_changed event fires when upload starts, progresses, or completes.
+      uploadTask.on("state_changed", (taskSnapshot: any) => { //state_changed event fires when upload starts, progresses, or completes.
         console.log(taskSnapshot)
+        let percentage = taskSnapshot.bytesTransferred / taskSnapshot.totalBytes * 100;
+        loading.setContent("Uploaded " + percentage + "% ...") //display % uploaded
+
       }, (error) => {
         console.log(error)
       }, () => {
@@ -206,13 +216,16 @@ export class FeedPage {
           console.log(url);
 
           firebase.firestore().collection("posts").doc(name).update({
-            image: url
+            image: url // update image property in firestore
           }).then(() => {
-            resolve()
+            loading.dismiss() //dismiss the loading.present()
+            resolve() //gives control back from Promise to calling function
           }).catch((err) => {
+            loading.dismiss() //dismiss the loading.present()
             reject()
           })
         }).catch((err) => {
+          loading.dismiss() //dismiss the loading.present()
           reject()
         })
       })
