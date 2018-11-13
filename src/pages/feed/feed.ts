@@ -4,6 +4,7 @@ import firebase from 'firebase';
 import moment from 'moment';
 import { LoginPage } from '../login/login';
 import { Camera, CameraOptions } from '@ionic-native/camera'; //Camera class allows for camera use/access, CameraOptions: configure camera
+import { HttpClient } from '@angular/common/http';
 
 /**
  * Generated class for the FeedPage page.
@@ -25,7 +26,7 @@ export class FeedPage {
   infiniteEvent: any;
   image: string;
 
-  constructor(public navCtrl: NavController, public navParams: NavParams, private loadingCtrl: LoadingController, private toastCtrl: ToastController, private camera: Camera) {
+  constructor(public navCtrl: NavController, public navParams: NavParams, private loadingCtrl: LoadingController, private toastCtrl: ToastController, private camera: Camera, private http: HttpClient) {
 
     this.getPosts();
 
@@ -141,7 +142,7 @@ export class FeedPage {
       this.getPosts(); //update posts onto user page after adding post to firestore collection
 
     }).catch((err) => {
-      console.log(err);
+      console.log(err)
     })
   }
 
@@ -229,6 +230,23 @@ export class FeedPage {
           reject()
         })
       })
+    })
+  }
+  like(post) {
+
+    let body = {
+      postId: post.id,
+      userId: firebase.auth().currentUser.uid,
+      action: post.data().likes && post.data().likes[firebase.auth().currentUser.uid] == true ? "unlike" : "like" // if likes exists, pass currentUser.uid as an index to likes. If currentUser.uid is authorized (true) assign "unlike", otherwise assign "like".
+      /*The LIKE button works as a toggle. If the post is already liked by user X, then user X can only unlike the post. They cannot like a post twice. To prevent that, we have a field called action that defines whether the user is liking the post or unliking it. If they have already liked it, the action will be set to unlike and vice versa.*/
+    }
+
+    this.http.post("https://us-central1-feedme-c73c0.cloudfunctions.net/updateLikesCount", JSON.stringify(body), {
+      responseType: "text"
+    }).subscribe((data) => {
+      console.log(data)
+    }, (error) => {
+      console.log(error)
     })
   }
 }
