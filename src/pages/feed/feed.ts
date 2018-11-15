@@ -45,22 +45,26 @@ export class FeedPage {
 
     let query = firebase.firestore().collection("posts").orderBy("created", "desc").limit(this.pageSize); //orderBy: places posts in descending order based on created date; limit(this.pageSize): for pagination - load 10 posts at a time.
 
-    //query.onSnapshot((snapshot) => { //onSnapshat (for realtime updates) is called everytime there is a change to firestore data
-    //   let changedDocs = snapshot.docChanges();
+    query.onSnapshot((snapshot) => { //onSnapshat (for realtime updates) is called everytime there is a change to firestore data
+      let changedDocs = snapshot.docChanges();
 
-    //   changedDocs.forEach((change) => {
-    //     if (change.type == "added") {
-    //       //TODO
-    //     }
-    //     if (change.type == "modified") {
-    //       //TODO
-    //       console.log("Document with id " + change.doc.id + " has been modified.");
-    //     }
-    //     if (change.type == "removed") {
-    //       //TODO
-    //     }
-    //   })
-    // })
+      changedDocs.forEach((change) => {
+        if (change.type == "added") {
+          //TODO
+        }
+        if (change.type == "modified") { //use for +1/-1 likes
+          for (let i = 0; i < this.posts.length; i++) { //go through all posts
+            if (this.posts[i].id == change.doc.id) { // find post that matches changed document.
+              this.posts[i] = change.doc; //replace post with changed document (the doc with +1/-1 likes)
+              console.log("Document with id " + change.doc.id + " has been modified.");
+            }
+          }
+        }
+        if (change.type == "removed") {
+          //TODO
+        }
+      })
+    })
 
     query.get()
       .then((docs) => { //docs is a QuerySnapshot (many docs) - need to loop over to access all the objects
@@ -241,11 +245,27 @@ export class FeedPage {
       /*The LIKE button works as a toggle. If the post is already liked by user X, then user X can only unlike the post. They cannot like a post twice. To prevent that, we have a field called action that defines whether the user is liking the post or unliking it. If they have already liked it, the action will be set to unlike and vice versa.*/
     }
 
+    let toast = this.toastCtrl.create({
+      message: "Updating like... Please wait."
+    });
+
+    toast.present(); //place toast "Updating Like... Please wait" onto screen for user to see.
+
     this.http.post("https://us-central1-feedme-c73c0.cloudfunctions.net/updateLikesCount", JSON.stringify(body), {
       responseType: "text"
     }).subscribe((data) => {
       console.log(data)
+
+      toast.setMessage("Like updated!");
+      setTimeout(() => {
+        toast.dismiss();
+      }, 3000)
+
     }, (error) => {
+      toast.setMessage("An error has occurred. Please try again later.")
+      setTimeout(() => {
+        toast.dismiss();
+      }, 3000)
       console.log(error)
     })
   }
