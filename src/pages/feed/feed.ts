@@ -1,10 +1,12 @@
 import { Component } from '@angular/core';
-import { NavController, NavParams, LoadingController, ToastController } from 'ionic-angular';
+import { NavController, NavParams, LoadingController, ToastController, ActionSheetController, AlertController, ModalController } from 'ionic-angular';
 import firebase from 'firebase';
 import moment from 'moment';
 import { LoginPage } from '../login/login';
 import { Camera, CameraOptions } from '@ionic-native/camera'; //Camera class allows for camera use/access, CameraOptions: configure camera
 import { HttpClient } from '@angular/common/http';
+import { CommentsPage } from '../comments/comments';
+import { Firebase } from '@ionic-native/firebase';
 
 /**
  * Generated class for the FeedPage page.
@@ -26,10 +28,33 @@ export class FeedPage {
   infiniteEvent: any;
   image: string;
 
-  constructor(public navCtrl: NavController, public navParams: NavParams, private loadingCtrl: LoadingController, private toastCtrl: ToastController, private camera: Camera, private http: HttpClient) {
+  constructor(public navCtrl: NavController, public navParams: NavParams, private loadingCtrl: LoadingController, private toastCtrl: ToastController, private camera: Camera, private http: HttpClient, private actionSheetCtrl: ActionSheetController, private alertCtrl: AlertController, private modalCtrl: ModalController, private firebaseCordova: Firebase) { //firebaseCordova for cloud messaging
 
     this.getPosts();
 
+    this.firebaseCordova.getToken().then((token) => {
+      console.log(token)
+
+      this.updateToken(token, firebase.auth().currentUser.uid);
+      
+    }).catch((err) => {
+      console.log(err)
+    })
+
+  }
+
+  updateToken(token: string, uid: string) {
+
+    firebase.firestore().collection("users").doc(uid).set({
+      token: token,
+      tokenUpdate: firebase.firestore.FieldValue.serverTimestamp()
+    }, {
+        merge: true
+      }).then(() => {
+        console.log("token saved to cloud firestore");
+      }).catch(err => {
+        console.log(err);
+      })
 
   }
 
@@ -268,5 +293,73 @@ export class FeedPage {
       }, 3000)
       console.log(error)
     })
+  }
+
+
+  comment(post) {
+
+    this.actionSheetCtrl.create({
+      buttons: [
+        {
+          text: "View All Comments",
+          handler: () => {
+            this.modalCtrl.create(CommentsPage, {
+              "post": post // "post" goes to comments.ts line 21
+            }).present();
+          }
+        },
+        {
+          text: "New Comment",
+          handler: () => {
+
+            this.alertCtrl.create({
+              title: "New Comment",
+              message: "Type your comment",
+              inputs: [
+                {
+                  name: "comment",
+                  type: "text"
+                }
+              ],
+              buttons: [
+                {
+                  text: "Cancel"
+                },
+                {
+                  text: "Post",
+                  handler: (data) => {
+
+                    if (data.comment) {
+
+                      firebase.firestore().collection("comments").add({
+                        text: data.comment,
+                        post: post.id,
+                        owner: firebase.auth().currentUser.uid,
+                        owner_name: firebase.auth().currentUser.displayName,
+                        created: firebase.firestore.FieldValue.serverTimestamp()
+                      }).then((doc) => {
+                        this.toastCtrl.create({
+                          message: "Comment posted successfully.",
+                          duration: 3000
+                        }).present();
+                      }).catch((err) => {
+                        this.toastCtrl.create({
+                          message: err.message,
+                          duration: 3000
+                        }).present();
+                      })
+
+                    }
+
+                  }
+                }
+              ]
+            }).present();
+
+          }
+        }
+
+      ]
+    }).present()
   }
 }
